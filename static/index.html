@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta type="description" content="Why yes, it is definitely legal that this thing exists (tm)">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+    <title>Mitch's Handy-Dandy Group Powerpoint Presenter</title>
+    <style>
+        body {
+            display:flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        #slide {
+            max-width: 80%;
+            max-height: 80%;
+            display: block;
+        }
+        .lasertime {
+            cursor: url('/pointer.png') 16 16, pointer;
+        }
+        .lasertime * {
+            cursor: url('/pointer.png') 16 16, pointer;
+        }
+    </style>
+    <script>
+        let socket = io(window.location.protocol+'//'+window.location.host);
+        function renderSlide(data){
+            document.querySelector('#slide').src = `/slides/${data.presentation}/slide-${(data.current_slide+'').padStart(2, '0')}.png`;
+        }
+        socket.on('presentation_change', (data) => {
+            renderSlide(data);
+            window.__presentationState = data;
+        });
+        function changeSlide(delta){
+            let newSlide = window.__presentationState.current_slide + delta;
+            if(newSlide < window.__presentationState.total_slides && newSlide > 0){
+                window.__presentationState.current_slide = newSlide;
+                socket.emit('slide_change', window.__presentationState.current_slide);
+                renderSlide(window.__presentationState);
+            }
+        }
+        window.addEventListener('keydown', (e) => {
+            if(e.keyCode==37){
+                changeSlide(-1);
+            }else if(e.keyCode==39){
+                changeSlide(1);
+            }
+        });
+        function laserTracker(mouseEvent){
+            const slidePos = document.querySelector('#slide').getBoundingClientRect();
+            const x = mouseEvent.offsetX/slidePos.width;
+            const y = mouseEvent.offsetY/slidePos.height;
+            socket.emit('laser_update', {x: x, y: y});
+        }
+        function laserMode(toggle){
+            if(toggle){
+                document.body.classList.add('lasertime');
+                socket.emit('laser_on', undefined);
+                const slide = document.querySelector('#slide');
+                slide.addEventListener('mousemove', laserTracker);
+                slide.addEventListener('mouseenter', laserTracker);
+                slide.addEventListener('mouseleave', laserTracker);
+            }else{
+                document.body.classList.remove('lasertime');
+                socket.emit('laser_off', undefined);
+                const slide = document.querySelector('#slide');
+                slide.removeEventListener('mousemove', laserTracker);
+                slide.removeEventListener('mouseenter', laserTracker);
+                slide.removeEventListener('mouseleave', laserTracker);
+            }
+        }
+        socket.on('surrender_laser', () => {
+            laserMode(false);
+            document.querySelector('#laser_checkbox').checked = false;
+         });
+         socket.on('hide_laser', () => {
+            document.querySelector('#laser').style.display="none";
+         });
+         socket.on('draw_laser', (pos) => {
+            const slidePos = document.querySelector('#slide').getBoundingClientRect();
+            const laserX = slidePos.left + pos.x*slidePos.width;
+            const laserY = slidePos.top + pos.y*slidePos.height;
+            const laser = document.querySelector('#laser');
+            laser.style.display = 'block';
+            const offset = laser.getBoundingClientRect().width/2;  // the center relative to the top left corner
+            laser.style.left = (laserX-offset)+'px';
+            laser.style.top = (laserY-offset)+'px';
+         });
+    </script>
+</head>
+<body>
+<img src="" id="slide">
+<div>
+    <button onclick="changeSlide(-1);">Previous</button>
+    <button onclick="changeSlide(1);">Next</button>
+    <br>
+    <input type="checkbox" id="laser_checkbox" onchange="laserMode(this.checked);">
+    <label for="laser_checkbox">laser pointer mode (make your cursor visible to everyone)</label>
+</div>
+<img id="laser" style="position: fixed; display:none;" src="/pointer.png">
+</body>
+</html>
