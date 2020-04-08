@@ -1,0 +1,2 @@
+# Mitch's Handy-Dandy Multi-User Slide Presenter.
+This web app lets multiple people share control of a slideshow as it is presented. It works by turning a PDF file containing your slides into a series of PNG files that it can display (using the pdftocairo utility, which must be on your PATH) and then setting up a simple SocketIO-based web page interface with which the presentation can be controlled by any of the presenters at any given point; you can also share your cursor and it will look like a laser pointer.
