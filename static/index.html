@@ -128,17 +128,25 @@
             const slide = document.querySelector('#slideCont');
             let slideHeight = window.innerHeight - controlHeight;
             const slideImage = document.querySelector('#slide');
-            const slideImageHeight = slideImage.getBoundingClientRect().height;
-            slideHeight = Math.min(slideHeight, slideImageHeight);
+            if(window.innerWidth/window.innerHeight < slideImage.naturalWidth/slideImage.naturalHeight){
+                const slideImageHeight = slideImage.getBoundingClientRect().height;
+                slideHeight = slideImageHeight;
+            }
             slide.style.height = slideHeight + 'px';
-            slide.style.width = (slideHeight * (slide.naturalWidth/slide.naturalHeight)) + 'px';
+            slide.style.width = (slideHeight * (slideImage.naturalWidth/slideImage.naturalHeight)) + 'px';
 
             if(isTouchScreen()){
                 document.querySelector('#laser_checkbox_cont').style.display = 'none';
             }
          }
-         window.onresize = setLayout;
-         window.onload = setLayout;
+         window.onload = () => {
+            const image = document.querySelector('#slide');
+            if(image.complete){
+                setLayout();
+             }
+            image.onload = setLayout;
+            window.onresize = setLayout;
+         }
     </script>
 </head>
 <body>
