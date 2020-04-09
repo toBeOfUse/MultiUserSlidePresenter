@@ -2,20 +2,41 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta type="description" content="Why yes, it is definitely legal that this thing exists (tm)">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
     <title>Mitch's Handy-Dandy Group Powerpoint Presenter</title>
     <style>
+        * {
+            box-sizing: border-box;
+            max-width: 100%;
+        }
+        html {
+            height: 100%;
+            overflow-y: hidden;
+            max-width: 100%;
+        }
         body {
-            display:flex;
+            height: 100%;
+            margin: 0;
+            padding: 5px;
+            display: flex;
             flex-direction: column;
             align-items: center;
             text-align: center;
+            position: relative;
+        }
+        a {
+            color: blue;
+        }
+        a:visited {
+            color: blue;
         }
         #slide {
-            max-width: 80%;
-            max-height: 80%;
-            display: block;
+            max-height: 100%;
+        }
+        #controls {
+            padding: 8px;
         }
         .lasertime {
             cursor: url('/pointer.png') 16 16, pointer;
@@ -25,6 +46,19 @@
         }
     </style>
     <script>
+        // https://stackoverflow.com/questions/4817029/whats-the-best-way-to-detect-a-touch-screen-device-using-javascript/4819886#4819886
+        function isTouchScreen() {
+            var prefixes = ' -webkit- -moz- -o- -ms- '.split(' ');
+            var mq = function (query) {
+                return window.matchMedia(query).matches;
+            }
+            if (('ontouchstart' in window) || window.DocumentTouch && document instanceof DocumentTouch) {
+                return true;
+            }
+            // include the 'heartz' as a way to have a non matching MQ to help terminate the join (https://git.io/vznFH)
+            var query = ['(', prefixes.join('touch-enabled),('), 'heartz', ')'].join('');
+            return mq(query);
+        }
         let socket = io(window.location.protocol+'//'+window.location.host);
         function renderSlide(data){
             document.querySelector('#slide').src = `/slides/${data.presentation}/slide-${(data.current_slide+'').padStart(2, '0')}.png`;
@@ -88,17 +122,42 @@
             laser.style.left = (laserX-offset)+'px';
             laser.style.top = (laserY-offset)+'px';
          });
+         function setLayout(){
+            const controls = document.querySelector('#controls');
+            const controlHeight = controls.getBoundingClientRect().height;
+            const slide = document.querySelector('#slideCont');
+            let slideHeight = window.innerHeight - controlHeight;
+            const slideImage = document.querySelector('#slide');
+            const slideImageHeight = slideImage.getBoundingClientRect().height;
+            slideHeight = Math.min(slideHeight, slideImageHeight);
+            slide.style.height = slideHeight + 'px';
+            slide.style.width = (slideHeight * (slide.naturalWidth/slide.naturalHeight)) + 'px';
+
+            if(isTouchScreen()){
+                document.querySelector('#laser_checkbox_cont').style.display = 'none';
+            }
+         }
+         window.onresize = setLayout;
+         window.onload = setLayout;
     </script>
 </head>
 <body>
-<img src="" id="slide">
-<div>
-    <button onclick="changeSlide(-1);">Previous</button>
-    <button onclick="changeSlide(1);">Next</button>
-    <br>
-    <input type="checkbox" id="laser_checkbox" onchange="laserMode(this.checked);">
-    <label for="laser_checkbox">laser pointer mode (make your cursor visible to everyone)</label>
+<div style="margin: auto;">
+    <div id="slideCont">
+        <img onclick="changeSlide(1);" src="" id="slide">
+    </div>
+    <div id="controls">
+        <div>
+            <button onclick="changeSlide(-1);">Previous</button>
+            <button onclick="changeSlide(1);">Next</button>
+        </div>
+        <div id="laser_checkbox_cont">
+            <input type="checkbox" id="laser_checkbox" onchange="laserMode(this.checked);">
+            <label for="laser_checkbox">laser pointer mode (make your cursor visible to everyone)</label>
+        </div>
+    </div>
 </div>
 <img id="laser" style="position: fixed; display:none;" src="/pointer.png">
+<a href style="position: absolute; right: 10px; bottom: 10px;" onclick="event.preventDefault();alert('Everyone viewing this page will see the same slide. In addition to using the next and previous buttons, you can also switch slides with the left and right arrow keys, or just by clicking on the currently shown one.');">?</a>
 </body>
 </html>
