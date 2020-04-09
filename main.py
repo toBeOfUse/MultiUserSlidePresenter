@@ -77,6 +77,7 @@ def laser_update(sid, data):
 
 
 if __name__ == "__main__":
+    print('hello!')
     presentations = glob.glob(os.path.join(static, 'slides\\')+'*.pdf')
     for presentation in presentations:
         folder = presentation[:-4]
@@ -85,8 +86,9 @@ if __name__ == "__main__":
         if not os.path.isdir(folder):
             print('generating png slides for '+presentation_name+'...')
             os.mkdir(folder)
-            subprocess.check_output(['C:\\poppler-0.68.0\\bin\\pdftocairo.exe', '-png', presentation, os.path.join(folder, 'slide')])
+            subprocess.check_output(['pdftocairo', '-png', presentation, os.path.join(folder, 'slide')])
             print('done!')
         slide_state["total_slides"] = len(glob.glob(os.path.join(folder, '*.png')))
     server.listen(4567)
+    print('starting tornado server...')
     tnio.IOLoop.current().start()
