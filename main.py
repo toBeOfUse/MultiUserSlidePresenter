@@ -35,7 +35,7 @@ authenticated_clients = set()
 
 
 async def client_meta(ip, sid):
-    if ip == '::1' or '192.168' in ip:
+    if '::1' in ip or '192.168' in ip or '127.0.0.1' in ip:
         print('websocket connected from local network, sid:', sid)
     else:
         http_client = tnhttpcl.AsyncHTTPClient()
@@ -50,7 +50,9 @@ def connect(sid, environ):
     asyncio.create_task(sio.emit('presentation_change', data=slide_state, room=sid))
     if laser_state["laser_controller"] and 0 <= laser_state['laser_x'] <= 1 and 0 <= laser_state['laser_y'] <= 1:
         asyncio.create_task(sio.emit('draw_laser', laser_state))
-    if not password or ('password' in environ['tornado.handler'].cookies and environ['tornado.handler'].cookies['password'] == password):
+    if not password or \
+            ('password' in environ['tornado.handler'].cookies and
+             environ['tornado.handler'].cookies['password'].value == password):
         authenticated_clients.add(sid)
         asyncio.create_task(sio.emit('authenticated', to=sid))
 
