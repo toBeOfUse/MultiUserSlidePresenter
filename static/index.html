@@ -60,6 +60,23 @@
             return mq(query);
         }
         let socket = io(window.location.protocol+'//'+window.location.host);
+        socket.on('connect-error', (error)=>console.log('connection error', error));
+        socket.on('disconnect', (error)=>console.log('disconnected', error));
+        socket.on('error', () => {
+            document.querySelector('#slideCont').innerHTML = 'connection failed! :((((';
+        });
+        function authenticate(){
+            const passwordBox = document.querySelector('#password');
+            socket.emit('authenticate', passwordBox.value);
+            passwordBox.value='';
+        }
+        socket.on('authenticated', ()=>{
+            window.__authenticated = true;
+            document.querySelector('#passwordCont').style.display='none';
+            document.querySelector('#prevNextCont').style.display='';
+            document.querySelector('#laserCheckboxCont').style.display='';
+            setLayout();
+        });
         function renderSlide(data){
             document.querySelector('#slide').src = `/slides/${data.presentation}/slide-${(data.current_slide+'').padStart(2, '0')}.png`;
         }
@@ -70,9 +87,7 @@
         function changeSlide(delta){
             let newSlide = window.__presentationState.current_slide + delta;
             if(newSlide < window.__presentationState.total_slides && newSlide > 0){
-                window.__presentationState.current_slide = newSlide;
-                socket.emit('slide_change', window.__presentationState.current_slide);
-                renderSlide(window.__presentationState);
+                socket.emit('slide_change', newSlide);
             }
         }
         window.addEventListener('keydown', (e) => {
@@ -106,8 +121,11 @@
             }
         }
         socket.on('surrender_laser', () => {
-            laserMode(false);
-            document.querySelector('#laser_checkbox').checked = false;
+            // if we're not authenticated we def didn't have control of the laser in the first place
+            if(window.__authenticated){
+                laserMode(false);
+                document.querySelector('#laserCheckbox').checked = false;
+            }
          });
          socket.on('hide_laser', () => {
             document.querySelector('#laser').style.display="none";
@@ -136,7 +154,7 @@
             slide.style.width = (slideHeight * (slideImage.naturalWidth/slideImage.naturalHeight)) + 'px';
 
             if(isTouchScreen()){
-                document.querySelector('#laser_checkbox_cont').style.display = 'none';
+                document.querySelector('#laserCheckboxCont').style.display = 'none';
             }
          }
          window.onload = () => {
@@ -155,13 +173,18 @@
         <img onclick="changeSlide(1);" src="" id="slide">
     </div>
     <div id="controls">
-        <div>
+        <div id="passwordCont">
+            <label for="password">password:</label>
+            <input type="password" id="password">
+            <button onclick="authenticate()">access controls</button>
+        </div>
+        <div id="prevNextCont" style="display:none;">
             <button onclick="changeSlide(-1);">Previous</button>
             <button onclick="changeSlide(1);">Next</button>
         </div>
-        <div id="laser_checkbox_cont">
-            <input type="checkbox" id="laser_checkbox" onchange="laserMode(this.checked);">
-            <label for="laser_checkbox">laser pointer mode (make your cursor visible to everyone)</label>
+        <div id="laserCheckboxCont" style="display:none;">
+            <input type="checkbox" id="laserCheckbox" onchange="laserMode(this.checked);">
+            <label for="laserCheckbox">laser pointer mode (make your cursor visible to everyone)</label>
         </div>
     </div>
 </div>

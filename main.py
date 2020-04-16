@@ -6,6 +6,7 @@ import asyncio
 import sys
 import glob
 import subprocess
+import http.cookies
 
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())  # required for tornado in python 3.8
@@ -29,6 +30,8 @@ laser_state = {
     "laser_y": -1
 }
 
+authenticated_clients = set()
+
 
 @sio.event
 def connect(sid, environ):
@@ -40,32 +43,51 @@ def connect(sid, environ):
 
 @sio.event
 def disconnect(sid):
+    if sid in authenticated_clients:
+        authenticated_clients.remove(sid)
     if sid == laser_state["laser_controller"]:
         laser_state["laser_controller"] = ""
         asyncio.create_task(sio.emit('hide_laser'))
 
 
 @sio.event
+def authenticate(sid, data):
+    if data == password or not password:
+        authenticated_clients.add(sid)
+        asyncio.create_task(sio.emit('authenticated', to=sid))
+
+
+def protected_event(handler):
+    def protected_handler(sid, data):
+        if password and sid not in authenticated_clients:
+            print('unauthenticated '+handler.__name__+' event attempted >:(')
+            return
+        else:
+            handler(sid, data)
+    return sio.on(handler.__name__, protected_handler)
+
+
+@protected_event
 def slide_change(sid, new_slide):
     if 0 < new_slide < slide_state['total_slides']:
         slide_state["current_slide"] = new_slide
-        asyncio.create_task(sio.emit('presentation_change', data=slide_state, skip_sid=sid))
+        asyncio.create_task(sio.emit('presentation_change', data=slide_state))
 
 
-@sio.event
+@protected_event
 def laser_on(sid, data):
     laser_state["laser_controller"] = sid
     asyncio.create_task(sio.emit('surrender_laser', skip_sid=sid))
 
 
-@sio.event
+@protected_event
 def laser_off(sid, data):
     if sid == laser_state["laser_controller"]:
         laser_state["laser_controller"] = ""
     asyncio.create_task(sio.emit('hide_laser'))
 
 
-@sio.event
+@protected_event
 def laser_update(sid, data):
     if sid == laser_state["laser_controller"] and "x" in data and "y" in data:
         laser_state["laser_x"] = data["x"]
@@ -76,6 +98,7 @@ def laser_update(sid, data):
             asyncio.create_task(sio.emit('hide_laser', skip_sid=sid))
 
 
+password = ""
 if __name__ == "__main__":
     print('hello!')
     presentations = glob.glob(os.path.join(static, 'slides\\')+'*.pdf')
@@ -89,6 +112,7 @@ if __name__ == "__main__":
             subprocess.check_output(['pdftocairo', '-png', presentation, os.path.join(folder, 'slide')])
             print('done!')
         slide_state["total_slides"] = len(glob.glob(os.path.join(folder, '*.png')))
+    password = input("set session password to (or just hit enter for no password checking): ")
     server.listen(4567)
     print('starting tornado server...')
     tnio.IOLoop.current().start()
