@@ -34,7 +34,7 @@ laser_state = {
 def connect(sid, environ):
     print('connected a client')
     asyncio.create_task(sio.emit('presentation_change', data=slide_state, room=sid))
-    if laser_state["laser_controller"] and 0 <= laser_state['x'] <= 1 and 0 <= laser_state['y'] <= 1:
+    if laser_state["laser_controller"] and 0 <= laser_state['laser_x'] <= 1 and 0 <= laser_state['laser_y'] <= 1:
         asyncio.create_task(sio.emit('draw_laser', laser_state))
 
 
