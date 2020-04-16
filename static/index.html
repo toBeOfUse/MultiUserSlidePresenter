@@ -68,6 +68,7 @@
         function authenticate(){
             const passwordBox = document.querySelector('#password');
             socket.emit('authenticate', passwordBox.value);
+            document.cookie='password='+passwordBox.value;
             passwordBox.value='';
         }
         socket.on('authenticated', ()=>{

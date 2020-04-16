@@ -1,12 +1,13 @@
 import socketio
 import tornado.web as tn
 import tornado.ioloop as tnio
+import tornado.httpclient as tnhttpcl
 import os
 import asyncio
 import sys
 import glob
 import subprocess
-import http.cookies
+import json
 
 if sys.platform == 'win32':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())  # required for tornado in python 3.8
@@ -33,12 +34,25 @@ laser_state = {
 authenticated_clients = set()
 
 
+async def client_meta(ip, sid):
+    if ip == '::1' or '192.168' in ip:
+        print('websocket connected from local network, sid:', sid)
+    else:
+        http_client = tnhttpcl.AsyncHTTPClient()
+        geo = json.loads((await http_client.fetch('https://ipinfo.io/' + ip + '/geo')).body)
+        print('websocket connected from', ip, geo['country'], geo['region'], geo['city'])
+        print('sid: ', sid)
+
+
 @sio.event
 def connect(sid, environ):
-    print('connected a client')
+    asyncio.create_task(client_meta(environ['tornado.handler'].request.remote_ip, sid))
     asyncio.create_task(sio.emit('presentation_change', data=slide_state, room=sid))
     if laser_state["laser_controller"] and 0 <= laser_state['laser_x'] <= 1 and 0 <= laser_state['laser_y'] <= 1:
         asyncio.create_task(sio.emit('draw_laser', laser_state))
+    if not password or ('password' in environ['tornado.handler'].cookies and environ['tornado.handler'].cookies['password'] == password):
+        authenticated_clients.add(sid)
+        asyncio.create_task(sio.emit('authenticated', to=sid))
 
 
 @sio.event
