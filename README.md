@@ -6,3 +6,7 @@ Add a pdf containing slides to the /slides directory, start the program, and nav
 
 ### Limitations:
 Right now it only displays the last presentation it happens to load from the /slides folder; you can only move through the slides one at a time; because of the simple nature of the slide-displaying technique, slide transitions and animations are not supported. It's also not currently set up to recognize a new presentation if it has the same filename as an old one. Some of these things might get addressed in the future, who knows.
+
+### Demo:
+
+![](demo.gifv)
