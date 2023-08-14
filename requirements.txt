@@ -4,7 +4,16 @@
 #
 #    pip-compile
 #
-python-engineio==3.12.1   # via -r requirements.in, python-socketio
-python-socketio==4.5.1    # via -r requirements.in
-six==1.14.0               # via -r requirements.in, python-engineio, python-socketio
-tornado==6.0.4            # via -r requirements.in
+python-engineio==3.12.1
+    # via
+    #   -r requirements.in
+    #   python-socketio
+python-socketio==4.5.1
+    # via -r requirements.in
+six==1.14.0
+    # via
+    #   -r requirements.in
+    #   python-engineio
+    #   python-socketio
+tornado==6.3.3
+    # via -r requirements.in
